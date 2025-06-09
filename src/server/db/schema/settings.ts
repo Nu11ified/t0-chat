@@ -57,6 +57,7 @@ export const userSettings = pgTable(
     theme: varchar("theme", { length: 20 }).default("system").notNull(),
     // AI settings
     defaultModel: varchar("default_model", { length: 100 }).notNull(),
+    systemPrompt: text("system_prompt"),
     defaultModelParameters: json("default_model_parameters")
       .$type<typeof defaultModelParams>()
       .default(defaultModelParams),
@@ -106,6 +107,7 @@ export const themeSchema = z.enum(["light", "dark", "system"]);
 export const updateUserSettingsSchema = z.object({
   theme: themeSchema.optional(),
   defaultModel: z.string().min(1).max(100).optional(),
+  systemPrompt: z.string().optional(),
   defaultModelParameters: z.object({
     temperature: z.number().min(0).max(2),
     topP: z.number().min(0).max(1),

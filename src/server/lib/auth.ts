@@ -13,7 +13,7 @@ import {
 } from "@polar-sh/better-auth";
 
 const polarClient = new Polar({
-    accessToken: env.POLAR_ACCESS_TOKEN as string,
+    accessToken: env.POLAR_ACCESS_TOKEN,
     // Use 'sandbox' if you're using the Polar Sandbox environment
     // Remember that access tokens, products, etc. are completely separated between environments.
     // Access tokens obtained in Production are for instance not usable in the Sandbox environment.
@@ -35,7 +35,7 @@ export const auth = betterAuth({
         multiSession(),
         polar({
             client: polarClient,
-            createCustomerOnSignUp: true,
+            createCustomerOnSignUp: false,
             getCustomerCreateParams: async ({ user }, request) => {
                 return {
                     metadata: {
@@ -53,7 +53,7 @@ export const auth = betterAuth({
                             slug: "t0-chat-Subscription" // Custom slug for easy reference in Checkout URL, e.g. /checkout/t0-chat-Subscription
                         }
                     ],
-                    successUrl: env.POLAR_SUCCESS_URL as string,
+                    successUrl: env.POLAR_SUCCESS_URL,
                     authenticatedUsersOnly: true
                 }),
                 portal(),

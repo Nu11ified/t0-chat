@@ -3,20 +3,31 @@
 import { MainLayout } from "@/components/layout/MainLayout";
 import { ChatInput } from "@/components/layout/ChatInput";
 import { MessageList } from "@/components/layout/MessageList";
-import { useAppStore } from "@/lib/store";
+import { useAppStore, type Message } from "@/lib/store";
 import { v4 as uuidv4 } from 'uuid';
 
+type StreamChunk = {
+  type: string;
+  text?: string;
+};
+
 export default function HomePage() {
-  const { addMessage, updateMessage } = useAppStore();
+  const { messages, addMessage, updateMessage, chatId, modelSettings } = useAppStore();
 
-  const handleSendMessage = (message: string) => {
-    if (message.trim() === "") return;
+  const handleSendMessage = async (message: string, fileUrls: string[] = []) => {
+    if (message.trim() === "" && fileUrls.length === 0) return;
 
-    const userMessageId = uuidv4();
+    const userMessageContent: Message['content'] = fileUrls.length > 0
+      ? [
+          { type: 'text' as const, text: message },
+          ...fileUrls.map(url => ({ type: 'image' as const, image: url }))
+        ]
+      : message;
+
     addMessage({
-      id: userMessageId,
+      id: uuidv4(),
       role: 'user',
-      content: message,
+      content: userMessageContent,
     });
 
     const assistantMessageId = uuidv4();
@@ -26,19 +37,63 @@ export default function HomePage() {
       content: 'Thinking...',
     });
 
-    const response = "This is a canned response.";
-    let streamedResponse = "";
-    let charIndex = 0;
+    try {
+      const history = messages.map(m => {
+        if (typeof m.content === 'string') return m;
+        const textContent = m.content.find(p => p.type === 'text')?.text ?? '';
+        return { ...m, content: textContent };
+      });
+      
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          messages: [...history, {id: 'temp', role: 'user', content: message}],
+          id: chatId,
+          model: modelSettings.model,
+          fileUrls,
+        }),
+      });
 
-    const streamInterval = setInterval(() => {
-      if (charIndex < response.length) {
-        streamedResponse += response[charIndex];
-        updateMessage(assistantMessageId, { content: streamedResponse });
-        charIndex++;
-      } else {
-        clearInterval(streamInterval);
+      if (!response.body) {
+        throw new Error("Response body is null");
       }
-    }, 50);
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let streamedResponse = "";
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          const [type, data] = line.split(":", 2);
+          if (!data) continue;
+
+          try {
+            const parsed: unknown = JSON.parse(data);
+            if (type === "0" && typeof parsed === "string") { // Text delta
+              streamedResponse += parsed;
+              updateMessage(assistantMessageId, { content: streamedResponse });
+            }
+          } catch (e) {
+            console.error("Failed to parse stream chunk", e);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+      updateMessage(assistantMessageId, { content: "An error occurred." });
+    }
   };
 
   return (

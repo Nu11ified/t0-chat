@@ -96,6 +96,18 @@ export function Sidebar() {
                 </div>
               )}
             </div>
+            <Link href="/settings">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start rounded-sm text-muted-foreground hover:bg-muted/30 hover:text-foreground",
+                  !isSidebarOpen && "justify-center"
+                )}
+                title="Settings"
+              >
+                {isSidebarOpen ? "Settings" : "S"}
+              </Button>
+            </Link>
             <Button
               variant="ghost"
               className={cn(

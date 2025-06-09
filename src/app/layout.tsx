@@ -4,6 +4,10 @@ import { type Metadata } from "next";
 import { TRPCReactProvider } from "@/trpc/react";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ClientOnly } from "@/components/client-only";
+import { Suspense } from "react";
+import { extractRouterConfig } from "uploadthing/server";
+import { ourFileRouter } from "@/app/api/uploadthing/core";
+import { NextSSRPlugin } from "@uploadthing/react/next-ssr-plugin";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,6 +25,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
+        <Suspense>
+          <NextSSRPlugin
+            routerConfig={extractRouterConfig(ourFileRouter)}
+          />
+        </Suspense>
         <ClientOnly>
           <ThemeProvider>
             <TRPCReactProvider>{children}</TRPCReactProvider>

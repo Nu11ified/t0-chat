@@ -1,6 +1,6 @@
 "use client";
 
-import { useAppStore } from "@/lib/store";
+import { useAppStore, type Message } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { User, Bot, Lightbulb, Compass, Code, School, Copy, Check, ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -17,7 +17,7 @@ const sampleQuestions = [
 export function MessageList({
   handleSendMessage,
 }: {
-  handleSendMessage: (message: string) => void;
+  handleSendMessage: (message: string, fileUrls?: string[]) => void;
 }) {
   const messages = useAppStore((state) => state.messages);
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
@@ -88,7 +88,22 @@ export function MessageList({
                     : "bg-muted"
                 )}
               >
-                <p>{message.content}</p>
+                {typeof message.content === 'string' ? (
+                  <p>{message.content}</p>
+                ) : (
+                  <div className="space-y-2">
+                    {message.content.map((part, index) => {
+                      if (part.type === 'text') {
+                        return <p key={index}>{part.text}</p>;
+                      }
+                      if (part.type === 'image') {
+                        // eslint-disable-next-line @next/next/no-img-element
+                        return <img key={index} src={part.image} alt="uploaded content" className="rounded-md" />;
+                      }
+                      return null;
+                    })}
+                  </div>
+                )}
               </div>
               {message.role === "user" ? (
                  <div className="h-8 w-8 flex-shrink-0 rounded-full bg-muted text-muted-foreground flex items-center justify-center">
@@ -97,7 +112,12 @@ export function MessageList({
               ) : (
                 <button
                   className="absolute right-full mr-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => handleCopy(message.content, message.id)}
+                  onClick={() => handleCopy(
+                    typeof message.content === 'string' 
+                      ? message.content 
+                      : message.content.filter(p => p.type === 'text').map(p => p.text).join('\n'),
+                    message.id
+                  )}
                 >
                   {copiedMessageId === message.id ? <Check size={16} /> : <Copy size={16} />}
                 </button>

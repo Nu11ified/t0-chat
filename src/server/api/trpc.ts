@@ -12,7 +12,6 @@ import { ZodError } from "zod";
 
 import { db } from "@/server/db";
 import { auth } from "@/server/lib/auth";
-import type { Session } from "better-auth";
 
 /**
  * 1. CONTEXT

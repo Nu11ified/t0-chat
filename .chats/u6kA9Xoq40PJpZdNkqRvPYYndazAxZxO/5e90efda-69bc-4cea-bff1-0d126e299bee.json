@@ -1,0 +1,23 @@
+[
+  {
+    "id": "temp",
+    "role": "user",
+    "content": "test"
+  },
+  {
+    "role": "assistant",
+    "id": "msg-mkz4lLNshFI2IBJPSIAq3B90",
+    "createdAt": "2025-06-09T23:45:06.197Z",
+    "content": "Hello! 😊 How can I assist you today?",
+    "toolInvocations": [],
+    "parts": [
+      {
+        "type": "step-start"
+      },
+      {
+        "type": "text",
+        "text": "Hello! 😊 How can I assist you today?"
+      }
+    ]
+  }
+]

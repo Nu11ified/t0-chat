@@ -1,6 +1,6 @@
 "use client";
 
-import { Paperclip, Search } from "lucide-react";
+import { Paperclip, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,10 +13,8 @@ import { Switch } from "@/components/ui/switch";
 import { useAppStore } from "@/lib/store";
 import { models } from "@/config/models";
 import type { ModelConfig } from "@/types/models";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
-import { v4 as uuidv4 } from 'uuid';
 import {
   Tooltip,
   TooltipContent,
@@ -24,11 +22,14 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { LegalModal } from "./LegalModal";
+import { UploadDropzone } from "@/utils/uploadthing";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
-export function ChatInput({ handleSendMessage }: { handleSendMessage: (message: string) => void }) {
-  const { modelSettings, setModelSettings, addMessage, updateMessage } = useAppStore();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+export function ChatInput({ handleSendMessage }: { handleSendMessage: (message: string, fileUrls: string[]) => void }) {
+  const { modelSettings, setModelSettings } = useAppStore();
   const [inputValue, setInputValue] = useState("");
+  const [fileUrls, setFileUrls] = useState<string[]>([]);
+  const [isUploadDialogOpen, setUploadDialogOpen] = useState(false);
 
   const selectedModel = models.find(m => m.id === modelSettings.model) ?? models[0];
 
@@ -44,22 +45,15 @@ export function ChatInput({ handleSendMessage }: { handleSendMessage: (message: 
     setModelSettings({ searchMode: checked });
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      setModelSettings({ fileAttachments: Array.from(event.target.files) });
-    }
-  };
-
-  const handleRemoveFile = (index: number) => {
-    setModelSettings({ 
-      fileAttachments: modelSettings.fileAttachments.filter((_, i) => i !== index)
-    });
+  const handleRemoveFile = (urlToRemove: string) => {
+    setFileUrls(fileUrls.filter(url => url !== urlToRemove));
   };
 
   const onSendMessage = () => {
-    if (inputValue.trim() === "") return;
-    handleSendMessage(inputValue);
+    if (inputValue.trim() === "" && fileUrls.length === 0) return;
+    handleSendMessage(inputValue, fileUrls);
     setInputValue("");
+    setFileUrls([]);
   };
 
   if (!selectedModel) {
@@ -70,12 +64,12 @@ export function ChatInput({ handleSendMessage }: { handleSendMessage: (message: 
     <div className="relative border-t border-border bg-background/80 p-4 backdrop-blur-xl">
       <div className="mx-auto max-w-2xl">
         <div className="flex flex-col gap-4">
-          {modelSettings.fileAttachments.length > 0 && (
+          {fileUrls.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {modelSettings.fileAttachments.map((file, index) => (
+              {fileUrls.map((url, index) => (
                 <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                  {file.name}
-                  <button onClick={() => handleRemoveFile(index)} className="rounded-full hover:bg-muted/50">
+                  {url.split('/').pop()}
+                  <button onClick={() => handleRemoveFile(url)} className="rounded-full hover:bg-muted/50">
                     <X className="h-3 w-3" />
                   </button>
                 </Badge>
@@ -92,25 +86,40 @@ export function ChatInput({ handleSendMessage }: { handleSendMessage: (message: 
 
           <div className="flex gap-2">
             <div className="relative flex-1 overflow-hidden rounded-sm border border-border bg-background/20 backdrop-blur-sm">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="absolute left-2 top-1.5" onClick={() => fileInputRef.current?.click()} aria-label="Attach files">
-                      <Paperclip className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Attach files</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                className="hidden"
-                multiple
-              />
+              <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <DialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="absolute left-2 top-1.5" aria-label="Attach files">
+                          <Paperclip className="h-4 w-4" />
+                        </Button>
+                      </DialogTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Attach files</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Upload Files</DialogTitle>
+                  </DialogHeader>
+                  <UploadDropzone
+                    endpoint="imageUploader"
+                    onClientUploadComplete={(res: { url: string }[]) => {
+                      if (res) {
+                        const urls = res.map(r => r.url);
+                        setFileUrls(prev => [...prev, ...urls]);
+                      }
+                      setUploadDialogOpen(false);
+                    }}
+                    onUploadError={(error: Error) => {
+                      alert(`ERROR! ${error.message}`);
+                    }}
+                  />
+                </DialogContent>
+              </Dialog>
               <Input
                 placeholder="Type your message here..."
                 className="border-0 bg-transparent pl-12 rounded-none focus-visible:ring-1 focus-visible:ring-gray-700"

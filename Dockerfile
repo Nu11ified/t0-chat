@@ -6,8 +6,11 @@ FROM base AS deps
 WORKDIR /app
 
 # Install dependencies
-COPY package.json bun.lockb ./
-RUN bun install --frozen-lockfile
+COPY package.json bun.lockb* ./
+RUN \
+  if [ -f bun.lockb ]; then bun install --frozen-lockfile; \
+  else bun install; \
+  fi
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -18,7 +21,7 @@ COPY . .
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
 # Disable telemetry during the build
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN bun run build
 
@@ -26,10 +29,10 @@ RUN bun run build
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
 # Disable telemetry
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN adduser --system --uid 1001 nextjs
 
@@ -48,9 +51,9 @@ USER nextjs
 
 EXPOSE 3000
 
-ENV PORT 3000
+ENV PORT=3000
 
 # Set hostname to localhost
-ENV HOSTNAME "0.0.0.0"
+ENV HOSTNAME="0.0.0.0"
 
 CMD ["bun", "server.js"] 

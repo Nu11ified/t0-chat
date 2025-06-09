@@ -123,3 +123,32 @@
     @apply bg-background text-foreground;
   }
 }
+
+.background-gradient {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 500px;
+  height: 500px;
+  background-color: rgba(168, 85, 247, 0.05);
+  filter: blur(120px);
+}
+
+.background-gradient.two {
+  left: auto;
+  right: 0;
+  top: auto;
+  bottom: 0;
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+.message-enter {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.message-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+}
